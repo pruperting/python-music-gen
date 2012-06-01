@@ -1,0 +1,314 @@
+===============================================================================
+Python Music Generator
+===============================================================================
+
+Simple library to generate midi patterns from numbers. 
+This library can be used to build generative music tools.
+
+Download from http://code.google.com/p/python-music-gen/
+
+Midi examples
+
+http://www.black-aura.com/resources/python-music-gen/arptest.mid
+http://www.black-aura.com/resources/python-music-gen/bassline.mid
+http://www.black-aura.com/resources/python-music-gen/chords.mid
+http://www.black-aura.com/resources/python-music-gen/chords2.mid
+
+MP3 examples (imported MIDI in Ableton Live and added instruments)
+
+http://www.black-aura.com/resources/python-music-gen/arps.mp3
+
+Code Examples
+
+View the examples under /music to start creating your own music!
+
+Documentation
+
+Creating a MIDI file
+===============================================================================
+
+from midiutil.MidiGenerator import MidiGenerator
+ 
+midiGenerator = MidiGenerator(tempo=105)
+midiGenerator.write()
+
+This code will write an empty midi file. 
+The midi file name will be the python_file_name.mid.
+
+
+A simple loop
+===============================================================================
+
+The following code will generate a loop with notes 60,62 and 64 playing in 
+sequence. The length and distance between notes will be 1/2 a beat. The 
+velocities will loop as follows: 100, 90, 100, 90, etc.
+
+from midiutil.MidiGenerator import MidiGenerator
+from midiutil.TrackGen import LoopingArray
+ 
+midiGenerator = MidiGenerator(tempo=105)
+ 
+# Create a looping array of notes 60, 62 and 64 (C, D, E)
+notes = LoopingArray([[60],[62],[64]])
+ 
+# Create a looping array of beats (note duration, note length)
+beats = LoopingArray([(0.5,0.5)])
+ 
+# Create a looping array of velocities
+velocities = LoopingArray([100,90])
+ 
+midiGenerator.add_track(0, 0, 
+						beat=beats, 
+						notes=notes, 
+						velocities=velocities, 
+						length=16)
+
+midiGenerator.write()
+
+
+A slightly more complex loop
+===============================================================================
+
+The following loop will play multiple notes with a varying beat.
+
+from midiutil.MidiGenerator import MidiGenerator
+from midiutil.TrackGen import LoopingArray
+
+midiGenerator = MidiGenerator(tempo=105)
+
+# Create a looping array of chord C, note C, and notes 64+67
+notes = LoopingArray([[60,64,67],[60],[64,67]])
+
+# Create a looping array of beats (note duration, note length)
+beats = LoopingArray([(0.5,0.5), (0.25,0.125)])
+
+# Create a looping array of velocities
+velocities = LoopingArray([100,90])
+
+midiGenerator.add_track(0, 0, 
+						beat=beats, 
+						notes=notes, 
+						velocities=velocities, 
+						length=16)
+
+midiGenerator.write()
+
+
+Introducing functioniterator
+===============================================================================
+
+The LoopingArray class can take as a parameter a number of generator classes 
+which modify the way notes are read from the array. For example the following 
+code will read notes from the array by skipping a value.
+
+from midiutil.MidiGenerator import MidiGenerator
+from midiutil.TrackGen import LoopingArray, StaticIterator
+
+midiGenerator = MidiGenerator(tempo=105)
+
+notes = LoopingArray(
+			[[x] for x in range(60,80)], 
+			functioniterator=[('add',StaticIterator(value=2))]
+		)
+
+beats = LoopingArray([(0.5,0.5)])
+velocities = LoopingArray([100,90])
+midiGenerator.add_track(0, 0, 
+						beat=beats, 
+						notes=notes, 
+						velocities=velocities, 
+						length=16)
+
+midiGenerator.write()
+
+functioniterator is a list of tuples in the form (function, generator)
+
+function can be: add, dec, mult, div
+
+For example:
+
+notes = LoopingArray(
+	[[x] for x in range(60,80)],
+	functioniterator=[
+		('add',StaticIterator(value=2)),
+		('dec',StaticIterator(value=1)),
+	]
+)
+
+Will first add 2 to the index and reduce it by 1. Note that when using 
+StaticIterator, this does not make alot of sense. However when using complex 
+generators such as LoopingArray, then very complex patterns can be achieved.
+
+
+Complex functioniterator
+===============================================================================
+
+As already mentioned, one can add a LoopingArray as a functioniterator. 
+In the following example, the note array index is first incremented by 1, 
+then by 2, 1 again, etc...
+
+from midiutil.MidiGenerator import MidiGenerator
+from midiutil.TrackGen import LoopingArray, StaticIterator
+
+midiGenerator = MidiGenerator(tempo=105)
+
+notes = LoopingArray(
+			[[x] for x in range(60,80)], 
+			functioniterator=[('add',LoopingArray([1,2]))]
+		)
+
+beats = LoopingArray([(0.5,0.5)])
+velocities = LoopingArray([100,90])
+
+midiGenerator.add_track(0, 0, 
+						beat=beats, 
+						notes=notes, 
+						velocities=velocities, 
+						length=16)
+
+midiGenerator.write()
+
+
+One can build complex patterns such as:
+
+
+import sys
+sys.path.append("../")
+
+from midiutil.TrackGen import LoopingArray
+
+if __name__ == '__main__':
+    arr = LoopingArray(
+	   [x for x in range(128)],
+	   functioniterator=[
+		 ('add', LoopingArray([1, 2, 3], functioniterator=[
+			 ('add', LoopingArray([1, 2, 3], functioniterator=[
+			   ('add', LoopingArray([1,2,3], id='array4', debug=True))
+			   ],
+			  id='array3', debug=True)
+			  )
+			 ],
+		  id='array2', debug=True)
+		  )
+		 ],
+	   id='array1', debug=True
+	   )
+    
+    for _ in range(20):
+        arr.next()
+
+
+LoopingIndexedArray
+===============================================================================
+
+A LoopingIndexedArray returns items from an array.
+
+values = [value1, value2, value3, value4, value5]
+indexes = [index1, index2, index3, index4, index5]
+             ^
+        loopindex
+
+returns values[indexes[loopindex]]
+
+on next(), the loopindex is moved. By default the value is incremented by 1, 
+however this can be modified by adding values to the list functioniterator 
+(see below).
+
+Example:
+
+x = LoopingIndexedArray([1,2,3,4,5],[0,1,0,2,0,3])
+x.next()
+> 1
+x.next()
+> 2
+x.next()
+> 1
+x.next()
+3
+x.next()
+> 1
+
+
+LoopingIncrementalIndexedArray
+===============================================================================
+
+A LoopingIncrementalIndexedArray returns items from an array.
+
+values = [value1, value2, value3, value4, value5]
+indexes = [index1, index2, index3, index4, index5]
+             ^
+          loopindex
+
+noteindex=noteindex+indexes[loopindex]
+
+returns values[noteindex]
+
+
+on next(), the loopindex is moved. By default the value is incremented by 1, 
+however this can be modified by adding values to the list functioniterator 
+(see below).
+
+Example:
+
+x = LoopingIncrementalIndexedArray([1,2,3,4,5],[0,1,-1,2,0,3])
+x.next()
+> 1
+x.next()
+> 1
+x.next()
+> 2
+x.next()
+> 1
+x.next()
+> 3
+x.next()
+> 3
+x.next()
+> 1
+
+
+Note: negative values will move the loopindex to the right
+
+Arpeggiator
+===============================================================================
+
+So far we have seen adding note loops as tracks. You can also add 
+arpeggios by using the add_arpeggio method.
+
+from midiutil.MidiGenerator import MidiGenerator
+from midiutil.Scales import MINOR, buildScale
+from midiutil.TrackGen import LoopingIncrementalIndexedArray, LoopingArray
+
+midiGenerator = MidiGenerator(tempo=105)
+
+sc = MINOR
+
+mscale = buildScale(sc, 48, 80)
+notes = LoopingArray([
+	[mscale[x] for x in [0, 2, 4, 6]], # chord 1
+	[mscale[x] for x in [3, 5, 7, 9]], # chord 2
+	[mscale[x] for x in [5, 7, 11]] # chord 3
+	], functioniterator=[('add', LoopingArray([1, 1, 2]))])
+chord_beats = LoopingArray([(4, 4), (2, 2)])
+notes_beats = LoopingArray([(0.25, 0.25)])
+velocities = LoopingArray([120, 120])
+note_skip = LoopingArray(
+				[0, 1, 2, 3, 1], 
+				functioniterator=[('add', LoopingArray([1, 2]))]
+			)
+
+midiGenerator.add_arpeggio(0, 0,
+	chords_beat=chord_beats,
+	notes_beat=notes_beats,
+	chords=notes,
+	velocities=velocities,
+	note_skip=note_skip,
+	length=32)
+
+midiGenerator.write()
+	
+In this example, the chords inside the LoopingArray notes, are played note 
+by note. The length of the chorded arpeggio is determined by chords_beat. The 
+duration of the notes inside the arpeggio is determined by notes_beat. So in
+this example, the arpeggio chords are held for 4 beat and then 2 beats. The 
+notes inside the arpeggio are 1/4 in length.
