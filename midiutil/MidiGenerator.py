@@ -23,34 +23,49 @@ import sys
 from midiutil.TrackGen import LoopingArray
 from midiutil.MidiFileGenerator import MidiFileGenerator, MidiTrack
 
+
 class MidiGenerator:
     def __init__(self, filename='', tempo=120):
         """
         If filename is empty, set the midi file to the __main__file_name.mid
         """
         if filename == '':
-            self.filename = os.path.basename(path.abspath(sys.modules['__main__'].__file__)).split('.')[0] + '.mid'
+            self.filename = os.path.basename(
+                path.abspath(sys.modules['__main__'].__file__)
+                ).split('.')[0] + '.mid'
         else:
             self.filename = filename
-            
+
         self.midi = MidiFileGenerator()
         self.tempo = tempo
-        
-    def add_track(self, track, time, trackname='', beat=[], notes=[], velocities=[], length=0):
-        track = MidiTrack(channel=track, tempo=self.tempo)
-    
+
+    def add_track(self, track, time, trackname='',
+        beat=[], notes=[], velocities=[], length=0):
+
+        # append to existing track
+        if track < len(self.midi.tracks):
+            track = self.midi.tracks[track]
+        else:
+            track = MidiTrack(channel=track, tempo=self.tempo)
+            self.midi.tracks.append(track)
+
         beat_index = time
         while beat_index - time < length:
             beat_value, duration_value = beat.next()
             for note in notes.next():
-                track.add_note(beat_index, duration_value, note, velocities.next())
+                track.add_note(
+                    beat_index,
+                    duration_value,
+                    note, velocities.next()
+                )
+
             beat_index += beat_value
-        
-        self.midi.tracks.append(track)
-    
-    def add_arpeggio(self, track, time, chords_beat=[], notes_beat=[], chords=[], velocities=[], note_skip=LoopingArray([1, 2, 3]), length=0):
+
+    def add_arpeggio(self, track, time, chords_beat=[], notes_beat=[],
+        chords=[], velocities=[], note_skip=LoopingArray([1, 2, 3]), length=0):
+
         track = MidiTrack(channel=track, tempo=self.tempo)
-        
+
         beat_index = time
         bi = beat_index
         while beat_index - time < length:
@@ -61,12 +76,16 @@ class MidiGenerator:
                 chordindex = note_skip.next()
                 note = chord[chordindex % len(chord)]
                 notes_beat_value, notes_duration_value = notes_beat.next()
-                track.add_note(bi, notes_duration_value, note, velocities.next())
+                track.add_note(
+                    bi,
+                    notes_duration_value,
+                    note,
+                    velocities.next())
+
                 bi += notes_beat_value
             beat_index += beat_value
-            
+
         self.midi.tracks.append(track)
-        
-        
+
     def write(self):
         self.midi.writeToFile(self.filename)

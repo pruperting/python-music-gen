@@ -1,8 +1,8 @@
 """
 Music Scales
 
-Source: http://en.wikipedia.org/wiki/List_of_musical_scales_and_modes 
-    
+Source: http://en.wikipedia.org/wiki/List_of_musical_scales_and_modes
+
 Copyright (C) 2012  Alfred Farrugia
 
 This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-
-
 
 ACOUSTIC_SCALE = [0, 2, 4, 6, 7, 9, 10]
 ADONAI_MALAKH = [0, 2, 4, 5, 7, 8, 10]
@@ -59,6 +57,7 @@ WHOLE_TONE_SCALE = [0, 2, 4, 6, 8, 10]
 MAJOR = [0, 2, 4, 5, 7, 9, 11]
 MINOR = [0, 2, 3, 5, 7, 8, 10]
 
+
 """
 Build a scale given an array s
 
@@ -66,5 +65,10 @@ Example: to build a scale between 0 and 128 using the notes C, D, E
 
 buildScale([0,2,4],0,128)
 """
+
+
 def buildScale(s, min_note=0, max_note=128):
-    return [x + (12 * j) for j in range(12) for x in s if x + (12 * j) >= min_note and x + (12 * j) <= max_note]
+    return [x + (12 * j)
+        for j in range(12)
+        for x in s
+        if x + (12 * j) >= min_note and x + (12 * j) <= max_note]

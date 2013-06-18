@@ -2,7 +2,7 @@
 Creates a MIDI multi-track and writes it to disk
 
 Limitations: tempo is only written at start of track
-    
+
 Copyright (C) 2012  Alfred Farrugia
 
 This program is free software: you can redistribute it and/or modify
@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import struct
 
+
 class MidiEvent:
     def __init__(self, time=0, control=0, channel=0, param_a=0, param_b=0):
         self.time = time
@@ -30,36 +31,54 @@ class MidiEvent:
         self.param_b = param_b
 
     def __str__(self):
-        return '%s%s%s' % (chr(self.control << 4 | self.channel), chr(self.param_a), chr(self.param_b))
+        return '%s%s%s' % (
+            chr(self.control << 4 | self.channel),
+            chr(self.param_a),
+            chr(self.param_b))
+
 
 class TempoEvent:
     def __init__(self, time=0, tempo=0):
         self.time = 0
         self.tempo = tempo
         self.control = 0xff
-        
+
     def __str__(self):
-        return '\xff\x51\x03%s' % (struct.pack('>L', (60000000 / self.tempo))[1:4])
+        return '\xff\x51\x03%s' % (
+            struct.pack('>L', (60000000 / self.tempo))[1:4])
+
 
 class MidiTrack:
     def __init__(self, channel=0, tempo=120):
         self.channel = channel
         self.midi_events = []
         self.tempo = tempo
-        
+
     def add_midi_event(self, time, control, channel, param_a, param_b):
-        self.midi_events.append(MidiEvent(time, control, channel, param_a, param_b))
+        self.midi_events.append(
+            MidiEvent(
+                time, control, channel, param_a, param_b
+            )
+        )
 
     def add_note(self, time, duration, note, velocity):
-        self.midi_events.append(MidiEvent(time, 0x9, self.channel, note, velocity))
-        self.midi_events.append(MidiEvent(time + duration, 0x8, self.channel, note, velocity))
-        
+        self.midi_events.append(
+            MidiEvent(
+                time, 0x9, self.channel, note, velocity
+            )
+        )
+        self.midi_events.append(
+            MidiEvent(
+                time + duration, 0x8, self.channel, note, velocity
+            )
+        )
+
     def __str__(self):
         s = ''
-        
+
         # write tempo as start of track
         self.midi_events.append(TempoEvent(0, self.tempo))
-        
+
         self.midi_events.sort(key=lambda x: (x.time * 100) + x.control)
         prev_time = 0
         for midi_event in self.midi_events:
@@ -67,32 +86,42 @@ class MidiTrack:
             if midi_event.time > prev_time:
                 delta_time = midi_event.time - prev_time
                 prev_time = midi_event.time
-                
+
             s += writeVarLength(96 * delta_time)
             s += str(midi_event)
-            
+
         s += '\x00\xFF\x2F\x00'
-            
+
         return 'MTrk%s%s' % (struct.pack('>L', len(s)), s)
-        
+
+
 class MidiFileGenerator:
     def __init__(self):
         self.number_of_track_chunks = 16
         self.ticks_per_beat = 96
         self.tracks = []
-        
+
     def getHeaderChunk(self):
         return 'MThd\x00\x00\x00\x06\x00\x01%s%s' % (
                                struct.pack('>h', self.number_of_track_chunks),
                                struct.pack('>h', self.ticks_per_beat))
-    
+
     def writeToFile(self, filename):
         f = open(filename, 'wb')
         f.write(str(self))
         f.close()
-    
+
+        print 'Wrote %s track%s to %s' % (
+            len(self.tracks), '' if len(self.tracks) == 1 else 's',
+            filename
+        )
+
     def __str__(self):
-        return '%s%s' % (self.getHeaderChunk(), ''.join(str(x) for x in self.tracks))
+        return '%s%s' % (
+            self.getHeaderChunk(),
+            ''.join(str(x) for x in self.tracks)
+        )
+
 
 def writeVarLength(value):
     newvalue = 0
